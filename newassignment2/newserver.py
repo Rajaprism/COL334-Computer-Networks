@@ -41,10 +41,19 @@ def submit():
     st, en = int(k[-3]), int(k[-1])
     print((en-st)/100000)
 
-def Send_To_Clients(client_socket):
+def Send_To_Clients(client_socket,threadno):
     print("sending to client has started")
     while True:
         line_number = client_socket.recv(1024).decode()
+        # try:
+        #     line_number = client_socket.recv(1024).decode()
+        # except ConnectionResetError:
+        #     print(f"Client disconnected. Reconnecting...")
+        #     client_socket, addr = myserver_socket.accept()
+        #     Clients_list[threadno] = [client_socket, addr]
+        #     print(f"Reconnected to client {threadno}")
+        #     client_socket.send(bytes("0",'utf-8'))
+        #     continue
         if line_number is None:
             continue
         line_number=int(line_number)
@@ -82,20 +91,22 @@ def client_thread(client_socket,threadno):
         print(threadno,ct)
         t=False
         while True:
-            try:
-                line_number = client_socket.recv(1024).decode()
-            except ConnectionResetError:
-                print(f"Client {threadno} disconnected. Reconnecting...")
-                client_socket, addr = myserver_socket.accept()
-                Clients_list[threadno] = [client_socket, addr]
-                print(f"Reconnected to client {threadno}")
-                t=True
-                break
+            line_number = client_socket.recv(1024).decode()
+            # try:
+            #     line_number = client_socket.recv(1024).decode()
+            # except ConnectionResetError:
+            #     print(f"Client {threadno} disconnected. Reconnecting...")
+            #     client_socket, addr = myserver_socket.accept()
+            #     Clients_list[threadno] = [client_socket, addr]
+            #     print(f"Reconnected to client {threadno}")
+            #     t=True
+            #     break
+
             line_buffer +=line_number
             if line_number.endswith("\n"):
                 break
-        if t :
-            break
+        # if t :
+        #     continue
         lines=line_buffer.split('\n',1)
         line_number=int(lines[0])
         if line_number==-1: 
@@ -143,13 +154,13 @@ try:
             break
     end_time=time.time()
     print(" total time : ",end_time-start_time)
-    # while True:
-    #     ok=True
-    #     for i in check:
-    #         if(i==0):
-    #             ok=False
-    #     if(ok):
-    #         break
+    while True:
+        ok=True
+        for i in check:
+            if(i==0):
+                ok=False
+        if(ok):
+            break
     
 except KeyboardInterrupt:
     print("Server closed by the user")
