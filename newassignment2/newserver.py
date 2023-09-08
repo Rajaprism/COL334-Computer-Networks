@@ -3,7 +3,7 @@ from _thread import *
 import time
 
 myserver_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-myserver_host="10.184.5.250"
+myserver_host="10.194.24.146"
 myserver_port=1235
 
 sirserver_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
@@ -39,21 +39,21 @@ def submit():
     print(res)
     k = res.replace('-', ',').split(',')
     st, en = int(k[-3]), int(k[-1])
-    print((en-st)/100000)
+    # print((en-st)/100000)
 
 def Send_To_Clients(client_socket,threadno):
     print("sending to client has started")
     while True:
-        line_number = client_socket.recv(1024).decode()
-        # try:
-        #     line_number = client_socket.recv(1024).decode()
-        # except ConnectionResetError:
-        #     print(f"Client disconnected. Reconnecting...")
-        #     client_socket, addr = myserver_socket.accept()
-        #     Clients_list[threadno] = [client_socket, addr]
-        #     print(f"Reconnected to client {threadno}")
-        #     client_socket.send(bytes("0",'utf-8'))
-        #     continue
+        # line_number = client_socket.recv(1024).decode()
+        try:
+            line_number = client_socket.recv(1024).decode()
+        except ConnectionResetError:
+            print(f"Client disconnected. Reconnecting...")
+            client_socket, addr = myserver_socket.accept()
+            Clients_list[threadno] = [client_socket, addr]
+            print(f"Reconnected to client {threadno}")
+            client_socket.send(bytes("0",'utf-8'))
+            continue
         if line_number is None:
             continue
         line_number=int(line_number)
@@ -80,33 +80,35 @@ def send_sendline_request(sirserver_socket):
 def client_thread(client_socket,threadno):
     # client_socket.send(bytes("Welcome to the server",'utf-8'))
     global ct
+    lt=0
     while True:
         if(ct<=0):
             client_socket.send(bytes("0",'utf-8'))
-            Send_To_Clients(client_socket)
+            Send_To_Clients(client_socket,threadno)
             break
         else:
             client_socket.send(bytes("1",'utf-8'))
         line_buffer=""
-        print(threadno,ct)
+        # print(threadno,ct)
         t=False
         while True:
-            line_number = client_socket.recv(1024).decode()
-            # try:
-            #     line_number = client_socket.recv(1024).decode()
-            # except ConnectionResetError:
-            #     print(f"Client {threadno} disconnected. Reconnecting...")
-            #     client_socket, addr = myserver_socket.accept()
-            #     Clients_list[threadno] = [client_socket, addr]
-            #     print(f"Reconnected to client {threadno}")
-            #     t=True
-            #     break
+            # line_number = client_socket.recv(1024).decode()
+            try:
+                line_number = client_socket.recv(1024).decode()
+            except ConnectionResetError:
+                print(f"Client {threadno} disconnected. Reconnecting...")
+                time.sleep(0.00001)
+                client_socket, addr = myserver_socket.accept()
+                Clients_list[threadno-1] = [client_socket, addr]
+                print(f"Reconnected to client {threadno}")
+                t=True
+                break
 
             line_buffer +=line_number
             if line_number.endswith("\n"):
                 break
-        # if t :
-        #     continue
+        if t :
+            continue
         lines=line_buffer.split('\n',1)
         line_number=int(lines[0])
         if line_number==-1: 
@@ -114,10 +116,12 @@ def client_thread(client_socket,threadno):
         line_content=lines[1]
         # print(line_buffer," -> ",threadno)
         if(All_lines[line_number]=="-69"):
+            lt+=1
             All_lines[line_number]=line_content
             ct-=1
     # print("out of client ",threadno)
-    # client_socket.close()
+    print(threadno,lt)
+    client_socket.close()
     check[threadno]=1
 
 def HandleSir(sirserver_socket):
@@ -129,10 +133,10 @@ def HandleSir(sirserver_socket):
         if(x==-1):
             continue
         if All_lines[x]=="-69" : 
-            # l+=1
+            l+=1
             All_lines[x]=line[1]
             ct-=1
-        # print(ct)
+        # print("master",ct)
     check[0]=1
     print("expected ",l)
 try:
