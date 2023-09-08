@@ -65,12 +65,21 @@ def submit(client_socket):
 # Function to send a SENDLINE request to the server
 def send_sendline_request(client_socket,hathi_socket):
     x=0
+    global hathi_ip
+    global hathi_port
     try:
         request = "SENDLINE\n"
         # signal = hathi_socket.recv(1024).decode()
         # print(signal)
         while True :
-            signal = hathi_socket.recv(1024).decode()
+            try:
+                signal = hathi_socket.recv(1024).decode()
+            except ConnectionResetError:
+                print(f"Client disconnected. Reconnecting...")
+                hathi_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                hathi_socket.connect((hathi_ip,hathi_port))
+                print(f"Reconnected to hathi")
+                continue
             if(signal=="1"):
                 line_buffer=""
                 client_socket.sendall(request.encode())
@@ -87,7 +96,15 @@ def send_sendline_request(client_socket,hathi_socket):
                 else:
                     stor[num]=1
                     All_lines[num]=line_buffer.split('\n',1)[1]
-                hathi_socket.sendall(line_buffer.encode())
+                try:
+                    hathi_socket.sendall(line_buffer.encode())
+                except ConnectionResetError:
+                    print(f"Client disconnected. Reconnecting...")
+                    hathi_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    hathi_socket.connect((hathi_ip,hathi_port))
+                    print(f"Reconnected to hathi")
+                    continue
+
             else:
                 receive(hathi_socket)
                 print("received")
