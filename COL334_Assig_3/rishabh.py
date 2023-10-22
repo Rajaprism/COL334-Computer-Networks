@@ -29,15 +29,17 @@ def send_and_receive(request, expected_response_prefix, max_attempts=5):
     global counter
     attempts = 0
     while True:
-        udp_socket.sendto(request.encode(), (server_host, server_port))
         u=0
         for i in range(mod):
             u+=t[i]
-        udp_socket.settimeout(timeout+(u)*delta)
+        # time.sleep(u*delta)
+        udp_socket.sendto(request.encode(), (server_host, server_port))
+        
+        udp_socket.settimeout(timeout)
         try:
             response, _ = udp_socket.recvfrom(4096)
             response = response.decode()
-            # print(response[10:20])
+
             if response.startswith(expected_response_prefix):
                 counter+=1
                 return response
@@ -47,8 +49,6 @@ def send_and_receive(request, expected_response_prefix, max_attempts=5):
             print(f"Timeout: No response received for request. Retrying... (Attempt {attempts + 1})")
             attempts += 1
             t[counter%mod]=attempts
-
-
 
 # Send the SendSize request to get the number of bytes to receive
 send_size_request = "SendSize\nReset\n\n"
@@ -69,12 +69,11 @@ offset_rt=""
 max_bytes_per_request = 1448
 
 
-def write_to_file():
-    with open("data_for_graph.txt", "w") as file:
-        file.write(offset_st)
-        file.write("\n\n\n")
-        file.write(offset_rt)
-
+# def write_to_file():
+#     with open("data_for_graph.txt", "w") as file:
+#         file.write(offset_st)
+#         file.write("\n\n\n")
+#         file.write(offset_rt)
 
 # Request and receive data in chunks
 count=0
@@ -85,7 +84,6 @@ for offset in range(0, num_bytes, max_bytes_per_request):
     offset_request = f"Offset: {offset}\nNumBytes: {num_to_receive}\n\n"
     st=time.time()
     while True:
-
         offset_response = send_and_receive(offset_request, "Offset: ")
 
         # Parse the response
@@ -97,14 +95,12 @@ for offset in range(0, num_bytes, max_bytes_per_request):
         if(offset==received_offset):
             end=time.time()
             print(offset, " : ", int((end-start)*1000))
-            if(count%10==0):
-                offset_st+=(f"{int((st-start)*1000)} {offset}\n")
-            if(count%10==0):
-                offset_rt+=(f"{int((end-start)*1000)} {offset}\n")
+            # if(count%10==0):
+            #     offset_st+=(f"{int((st-start)*1000)} {offset}\n")
+            # if(count%10==0):
+            #     offset_rt+=(f"{int((end-start)*1000)} {offset}\n")
             count+=1
             break
-
-
 
 # Assemble the data in the correct order
 assembled_data = bytearray(num_bytes)
@@ -137,12 +133,9 @@ if result_response.startswith("Result: "):
     print(f"Time taken (ms): {time_taken}")
     print(f"Penalty: {penalty}")
     
-
 else:
     print("Error: Failed to get the result from the server.")
 
+# write_to_file()
 
-write_to_file()
-
-# Close the UDP socket
 udp_socket.close()
