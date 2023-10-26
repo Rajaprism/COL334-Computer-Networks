@@ -3,16 +3,18 @@ import hashlib
 import time
 
 # Server details
-server_host = "10.17.6.5"
-server_host="127.0.0.1"
+server_host = "10.17.7.134"
+# server_host="127.0.0.1"
 server_port = 9801
-start=time.time()
+
 
 # Create a UDP socket
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # Define the timeout for receiving a response (in seconds)
-timeout = 0.05
+timeout = 0.02
+alpha=0.125
+beta=0.25
 
 def send_and_receive(request, expected_response_prefix):
 
@@ -49,11 +51,18 @@ All_offset=[]
 max_bytes_per_request = 1448
 
 
-def SendRequest(cwnd,ai_factor,mi_factor):
-    print(cwnd,"-------------------------------------------------------------")
+def SendRequest(cwnd,mi_factor,ExpectedRTT,DevRTT,TimeOut):
+
+    # print(ExpectedRTT)
+
+    print("------------------------------",TimeOut,"-----------------------")
+
+    # print(ExpectedRTT,"   ",DevRTT)
+    # timeout2=ExpectedRTT
+    start=time.time()
     requested_offset=set([])
     n=len(All_offset)
-    count=min(cwnd,n)
+    count=min(int(cwnd),n)
 
     for i in range(count):
 
@@ -62,15 +71,17 @@ def SendRequest(cwnd,ai_factor,mi_factor):
         udp_socket.sendto(offset_request.encode(), (server_host, server_port))
 
         requested_offset.add(All_offset[-1])
-        print(All_offset[-1],end=" ")
+
         All_offset.pop()
 
-    udp_socket.settimeout(timeout)
+    udp_socket.settimeout(TimeOut)
     responses=[]
 
+    
     while True:
+        # time.sleep(0.005)
         if(count==0):
-            cwnd=cwnd+ai_factor
+            cwnd=cwnd+(1/cwnd)
             break
         try:
             response, _ = udp_socket.recvfrom(4096)
@@ -79,10 +90,16 @@ def SendRequest(cwnd,ai_factor,mi_factor):
             if response.startswith("Offset: "):
                 count-=1
                 responses.append(response)
-
+                end=time.time()
+                SampleRTT=(end-start)
+                start=end
+                ExpectedRTT=(1-alpha)*ExpectedRTT+alpha*(SampleRTT)
+                DevRTT=(1-beta)*DevRTT+beta*abs(ExpectedRTT-SampleRTT)
+                TimeOut=ExpectedRTT+4*DevRTT
+            
         except socket.timeout:
-            print("Timeout: No response received within the timeout period.")
-            cwnd=int(cwnd*mi_factor)
+            # print("Timeout: No response received within the timeout period.")
+            cwnd=cwnd*mi_factor
             break
 
     for offset_response in responses:
@@ -90,30 +107,33 @@ def SendRequest(cwnd,ai_factor,mi_factor):
         received_offset = int(offset_response.split("\n")[0].split(": ")[1])
         received_num_bytes = int(offset_response.split("\nNumBytes: ")[1].split("\n")[0])
         received_data = offset_response.split("\n\n", 1)[1].encode()
-        print("received_offset ",received_offset)
+
         requested_offset.discard(received_offset)
         data_buffer[received_offset // 1448] = (received_offset, received_num_bytes, received_data)
 
     for off in requested_offset:
         All_offset.append(off)
-        print("lost ",off)
 
-    return cwnd
+    return [cwnd,ExpectedRTT,DevRTT,TimeOut]
 
 
 def RunAIMD():
     # Request and receive data in chunks
-    mincwnd=1
-    cwnd=1
-    ai_factor=1
+    cwnd=1.0
     mi_factor=0.5
+    ExpectedRTT=0.05
+    DevRTT=0
+    TimeOut=0.05
     
     for offset in range(0, num_bytes, max_bytes_per_request):
-        All_offset.append(offset)
+        All_offset.append(offset,)
 
     while len(All_offset):
-        response=SendRequest(cwnd,ai_factor,mi_factor)
-        cwnd=max(mincwnd,response)
+        response=SendRequest(cwnd,mi_factor,ExpectedRTT,DevRTT,TimeOut)
+        cwnd=max(1.0,response[0])
+        ExpectedRTT=response[1]
+        DevRTT=response[2]
+        TimeOut=response[3]
 
 
 def CheckResult():
@@ -121,9 +141,6 @@ def CheckResult():
     assembled_data = bytearray(num_bytes)
 
     for data in data_buffer:
-        if(data is None):
-            print("Data is None")
-            continue
         assembled_data[data[0]:data[0]+data[1]] = data[2]
 
     # Calculate MD5 hash of the received data
