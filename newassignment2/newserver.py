@@ -3,12 +3,12 @@ from _thread import *
 import time
 
 myserver_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-myserver_host="10.194.24.146"
+myserver_host="10.184.21.237"
 myserver_port=1235
 
 sirserver_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-sirserver_host="vayu.iitd.ac.in"
-sirserver_port=9801
+sirserver_host="10.17.7.218"
+sirserver_port=9803
 
 myserver_socket.bind((myserver_host,myserver_port))
 myserver_socket.listen(5)
@@ -19,7 +19,7 @@ ThreadCount=0
 Clients_list=[]
 All_lines=["-69"]*1000
 ct=1000
-nclients=2
+nclients=1
 check=[0]*nclients
 
 # limit = 500
