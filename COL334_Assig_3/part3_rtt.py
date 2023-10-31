@@ -2,13 +2,10 @@ import socket
 import hashlib
 import time
 
-# Server details
-# server_host = "10.17.6.5"
 server_host="127.0.0.1"
 server_port = 9801
-# java UDPServer 9801 big.txt 10000 constantrate notournament verbose
 
-# Create a UDP socket
+
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # Define the timeout for receiving a response (in seconds)
@@ -35,7 +32,6 @@ def findSize():
     response=send_and_receive(request,expected_response_prefix)
     return int(response.split(": ")[1])
 
-
 # the number of bytes to receive
 num_bytes = findSize()
 print("Total size to be received : ",num_bytes)
@@ -47,11 +43,12 @@ All_offset=[]
 
 # Define the maximum number of bytes per request
 max_bytes_per_request = 1448
-alpha=0.2
-beta=0.5
+alpha=0.125
+beta=0.25
 
+def SendRequest(cwnd,mi_factor,EstimatedRTT,DevRTT):
 
-def SendRequest(cwnd,mi_factor,EstimatedRTT,DevRTT,TimeOut):
+    TimeOut=EstimatedRTT+4*DevRTT
     print("Time Out : ",TimeOut," windowsize : ",cwnd)
     requested_offset=set([])
     n=len(All_offset)
@@ -87,7 +84,7 @@ def SendRequest(cwnd,mi_factor,EstimatedRTT,DevRTT,TimeOut):
                 start=end
                 DevRTT=(1-beta)*DevRTT+beta*abs(SampleRTT-EstimatedRTT)
                 EstimatedRTT=(1-alpha)*EstimatedRTT+alpha*SampleRTT
-                TimeOut=EstimatedRTT+4*DevRTT
+                TimeOut=EstimatedRTT+4*DevRTT+0.005
                 udp_socket.settimeout(TimeOut)
 
         except socket.timeout:
@@ -108,7 +105,7 @@ def SendRequest(cwnd,mi_factor,EstimatedRTT,DevRTT,TimeOut):
         All_offset.append(off)
 
 
-    return [cwnd,EstimatedRTT,DevRTT,TimeOut]
+    return [cwnd,EstimatedRTT,DevRTT]
 
 
 def RunAIMD():
@@ -117,17 +114,16 @@ def RunAIMD():
     mi_factor=0.5
     EstimatedRTT=0.05
     DevRTT=0.001
-    TimeOut=0.01
+
     for offset in range(0, num_bytes, max_bytes_per_request):
         All_offset.append(offset)
 
     while len(All_offset):
-        response=SendRequest(cwnd,mi_factor,EstimatedRTT,DevRTT,TimeOut)
+        response=SendRequest(cwnd,mi_factor,EstimatedRTT,DevRTT)
         cwnd=max(1.0,response[0])
         EstimatedRTT=response[1]
         DevRTT=response[2]
-        TimeOut=response[3]
-        # print("Printing the current window size : ",cwnd)
+
 
 
 
@@ -163,10 +159,9 @@ def CheckResult():
         
     else:
 
-        print("Error: Failed to get the result from the server.")
+        print(f"Error: Failed to get the result from the server.")
 
     udp_socket.close()
-
 
 
 

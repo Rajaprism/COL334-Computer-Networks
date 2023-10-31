@@ -4,7 +4,7 @@ import time
 
 # Server details
 server_host = "10.17.7.134"
-# server_host="127.0.0.1"
+server_host = "127.0.0.1"
 server_port = 9801
 start=time.time()
 
@@ -85,10 +85,6 @@ def RunAIMD():
             ReceiveRequest()
 
 
-
-
-
-
 def CheckResult():
     # Assemble the data in the correct order
     assembled_data = bytearray(num_bytes)
@@ -124,8 +120,6 @@ def CheckResult():
         print("Error: Failed to get the result from the server.")
 
     udp_socket.close()
-
-
 
 
 RunAIMD()
