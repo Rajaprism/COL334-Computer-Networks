@@ -4,6 +4,7 @@ import time
 from _thread import *
 # Server details
 server_host = "10.17.7.218"
+# server_host = "127.0.0.1"
 server_port = 9802
 start=time.time()
 
@@ -57,7 +58,7 @@ def SendRequest(threadno):
     global All_offset
     print("Thread No hi bye noentry : ",threadno)
     while(len(All_offset)!=0):
-        time.sleep(0.001)
+        time.sleep(0.008)
         num_to_receive=min(max_bytes_per_request,num_bytes-(All_offset[-1]))
         offset_request = f"Offset: {All_offset[-1]}\nNumBytes: {num_to_receive}\n\n"
         udp_socket.sendto(offset_request.encode(), (server_host, server_port))
@@ -92,7 +93,6 @@ def RunAIMD():
     for i in range(0, num_bytes, max_bytes_per_request):
         All_offset.append(i)
         offset.append(i)
-    start_new_thread(ReceiveRequest,())
     threadno=1
     while len(All_offset)!=0:
         check=True
@@ -144,5 +144,4 @@ def CheckResult():
 
 RunAIMD()
 CheckResult()
-
 print("NO of time squished : ",squished_no)

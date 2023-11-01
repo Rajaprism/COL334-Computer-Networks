@@ -3,7 +3,8 @@ import hashlib
 import time
 
 server_host="127.0.0.1"
-server_port = 9801
+# server_host = "10.17.7.218"
+server_port = 9802
 
 
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -84,7 +85,7 @@ def SendRequest(cwnd,mi_factor,EstimatedRTT,DevRTT):
                 start=end
                 DevRTT=(1-beta)*DevRTT+beta*abs(SampleRTT-EstimatedRTT)
                 EstimatedRTT=(1-alpha)*EstimatedRTT+alpha*SampleRTT
-                TimeOut=EstimatedRTT+4*DevRTT+0.005
+                TimeOut=EstimatedRTT+4*DevRTT+0.01
                 udp_socket.settimeout(TimeOut)
 
         except socket.timeout:

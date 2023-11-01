@@ -3,15 +3,17 @@ import hashlib
 import time
 
 # Server details
-server_host = "10.17.7.134"
-# server_host="127.0.0.1"
-server_port = 9801
+server_host = "10.17.7.218"
+server_host="127.0.0.1"
+server_port = 9802
 start=time.time()
 
 # Create a UDP socket
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # Define the timeout for receiving a response (in seconds)
+# 0.01 for about 50 - 80 penalty 
+# 0.02 for about under 50 penalty
 timeout = 0.02
 
 def send_and_receive(request, expected_response_prefix):
@@ -71,7 +73,7 @@ def SendRequest(cwnd,ai_factor,mi_factor):
     while True:
         time.sleep(0.004)
         if(count==0):
-            cwnd=cwnd+(1/cwnd)
+            cwnd=cwnd+2*(1/cwnd)
             break
         try:
             response, _ = udp_socket.recvfrom(4096)

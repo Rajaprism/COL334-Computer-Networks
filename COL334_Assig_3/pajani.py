@@ -6,7 +6,7 @@ import logging
 
 # logging.basicConfig(filename='client_log.txt', level=logging.INFO, format='%(message)s')
 start_time = time.time()*1000
-serverName = '10.17.6.5'
+serverName = "10.17.7.218"
 serverPort = 9801
 clientSocket = socket(AF_INET, SOCK_DGRAM)
 numByt = 1448

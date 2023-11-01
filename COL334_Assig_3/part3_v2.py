@@ -4,6 +4,7 @@ import time
 from _thread import *
 # Server details
 server_host = "10.17.7.218"
+# server_host = "127.0.0.1"
 server_port = 9802
 start=time.time()
 
@@ -56,35 +57,38 @@ def SendRequest(threadno):
     global check
     global All_offset
     print("Thread No hi bye noentry : ",threadno)
+    c=0
     while(len(All_offset)!=0):
-        time.sleep(0.001)
+        time.sleep(0.008)
         num_to_receive=min(max_bytes_per_request,num_bytes-(All_offset[-1]))
         offset_request = f"Offset: {All_offset[-1]}\nNumBytes: {num_to_receive}\n\n"
         udp_socket.sendto(offset_request.encode(), (server_host, server_port))
         All_offset.pop()
+        c+=1
     check=False
 
 def ReceiveRequest():
     global offset
     global squished_no
-    try:
-        response, _ = udp_socket.recvfrom(4096)
-        response = response.decode()
+    while(len(offset)!=0):
+        try:
+            response, _ = udp_socket.recvfrom(4096)
+            response = response.decode()
 
-        if response.startswith("Offset: "):
-            received_offset = int(response.split("\n")[0].split(": ")[1])
-            received_num_bytes = int(response.split("\nNumBytes: ")[1].split("\n")[0])
-            received_data = response.split("\n\n", 1)[1].encode()
+            if response.startswith("Offset: "):
+                received_offset = int(response.split("\n")[0].split(": ")[1])
+                received_num_bytes = int(response.split("\nNumBytes: ")[1].split("\n")[0])
+                received_data = response.split("\n\n", 1)[1].encode()
 
-            print("received_offset : ",received_offset)
-            
-            if(data_buffer[received_offset // 1448]==None):
-                offset.remove(received_offset)
-                data_buffer[received_offset // 1448] = (received_offset, received_num_bytes, received_data)
-        if "Squished" in response:
-            squished_no+=1
-    except socket.timeout:
-        print(f"Timeout: No response received for request. Retrying...")
+                print("received_offset : ",received_offset)
+                
+                if(data_buffer[received_offset // 1448]==None):
+                    offset.remove(received_offset)
+                    data_buffer[received_offset // 1448] = (received_offset, received_num_bytes, received_data)
+            if "Squished" in response:
+                squished_no+=1
+        except socket.timeout:
+            print(f"Timeout: No response received for request. Retrying...")
 
 def RunAIMD():
     global All_offset
@@ -96,11 +100,7 @@ def RunAIMD():
     threadno=1
     while len(All_offset)!=0:
         check=True
-        start_new_thread(SendRequest,(threadno,))
-        threadno+=1
-        while(check):
-            ReceiveRequest()
-        threadno-=1
+        SendRequest(threadno)
         All_offset=offset[:]
     
 
